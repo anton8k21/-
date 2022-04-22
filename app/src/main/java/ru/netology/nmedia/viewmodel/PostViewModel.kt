@@ -7,6 +7,7 @@ import ru.netology.nmedia.model.FeedModel
 import ru.netology.nmedia.repository.*
 import ru.netology.nmedia.util.SingleLiveEvent
 import java.io.IOException
+import java.lang.Exception
 import kotlin.concurrent.thread
 
 private val empty = Post(
@@ -34,26 +35,29 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadPosts() {
-        thread {
-            // Начинаем загрузку
-            _data.postValue(FeedModel(loading = true))
-            try {
-                // Данные успешно получены
-                val posts = repository.getAll()
-                FeedModel(posts = posts, empty = posts.isEmpty())
-            } catch (e: IOException) {
-                // Получена ошибка
-                FeedModel(error = true)
-            }.also(_data::postValue)
-        }
+        _data.value = FeedModel(loading = true)
+        repository.getAllAsync(object : PostRepository.GetAllCallback<List<Post>> {
+            override fun onSuccess(value: List<Post>) {
+                _data.postValue(FeedModel(posts = value, empty = value.isEmpty()))
+            }
+
+            override fun onError(e: Exception) {
+                _data.postValue(FeedModel(error = true))
+            }
+        })
     }
 
     fun save() {
         edited.value?.let {
-            thread {
-                repository.save(it)
-                _postCreated.postValue(Unit)
-            }
+                repository.save(it, object : PostRepository.GetAllCallback<Post>{
+                    override fun onSuccess(value: Post) {
+                        _postCreated.postValue(Unit)
+                    }
+
+                    override fun onError(e: Exception) {
+                        super.onError(e)
+                    }
+                })
         }
         edited.value = empty
     }
@@ -71,42 +75,56 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun likeById(id: Long) {
-        thread { repository.likeById(id)
-        _data.postValue(
-            _data.value?.copy(posts = _data.value?.posts.orEmpty().map { post ->
-                if (post.id == id){
-                    post.copy(likes = post.likes + 1, likedByMe = !post.likedByMe)
-                }else
-                    post
-            })
-        )}
-    }
-    fun deliteLike(id: Long){
-        thread { repository.deliteLike(id)
-            _data.postValue(
-                _data.value?.copy(posts = _data.value?.posts.orEmpty().map { post ->
+        repository.likeById(id, object : PostRepository.GetAllCallback<Long> {
+
+            override fun onSuccess(value: Long) {
+                _data.postValue(
+                _data.value?.copy(posts = _data.value?.posts.orEmpty().map{ post ->
                     if (post.id == id){
-                        post.copy(likes = post.likes - 1, likedByMe = !post.likedByMe)
+                        post.copy(likes = post.likes + 1, likedByMe = !post.likedByMe)
                     }else
                         post
                 })
-            )}
+                )
+            }
+        })
     }
 
-    fun removeById(id: Long) {
-        thread {
-            // Оптимистичная модель
-            val old = _data.value?.posts.orEmpty()
+
+fun deliteLike(id: Long) {
+        repository.deliteLike(id, object : PostRepository.GetAllCallback<Long>{
+
+            override fun onSuccess(value: Long) {
+                _data.postValue(
+                    _data.value?.copy(posts = _data.value?.posts.orEmpty().map { post ->
+                        if (post.id == id) {
+                            post.copy(likes = post.likes - 1, likedByMe = !post.likedByMe)
+                        } else
+                            post
+                    })
+                )
+            }
+        })
+
+
+}
+
+fun removeById(id: Long) {
+    val old = _data.value?.posts.orEmpty()
+    repository.removeById(id, object : PostRepository.GetAllCallback<Long> {
+        override fun onSuccess(value: Long) {
             _data.postValue(
                 _data.value?.copy(posts = _data.value?.posts.orEmpty()
                     .filter { it.id != id }
                 )
             )
-            try {
-                repository.removeById(id)
-            } catch (e: IOException) {
-                _data.postValue(_data.value?.copy(posts = old))
-            }
         }
-    }
+
+        override fun onError(e: Exception) {
+            _data.postValue(_data.value?.copy(posts = old))
+        }
+
+    })
+
+}
 }
