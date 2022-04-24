@@ -2,6 +2,7 @@ package ru.netology.nmedia.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.*
+import ru.netology.nmedia.dto.Attachment
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModel
 import ru.netology.nmedia.repository.*
@@ -16,7 +17,12 @@ private val empty = Post(
     author = "",
     likedByMe = false,
     likes = 0,
-    published = ""
+    published = "",
+    authorAvatar = "",
+    attachment = Attachment(
+        url = "",
+        description = null
+    )
 )
 
 class PostViewModel(application: Application) : AndroidViewModel(application) {
