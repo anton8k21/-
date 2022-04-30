@@ -1,6 +1,8 @@
 package ru.netology.nmedia.viewmodel
 
+import android.app.Activity
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.*
 import ru.netology.nmedia.dto.Attachment
 import ru.netology.nmedia.dto.Post
@@ -49,6 +51,8 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
 
             override fun onError(e: Exception) {
                 _data.postValue(FeedModel(error = true))
+                Toast.makeText(getApplication(),"Возникла проблемма при загрузке списка поста",Toast.LENGTH_SHORT)
+                    .show()
             }
         })
     }
@@ -61,7 +65,8 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     override fun onError(e: Exception) {
-                        super.onError(e)
+                        Toast.makeText(getApplication(),"Возникла проблемма при добавлении поста",Toast.LENGTH_SHORT)
+                            .show()
                     }
                 })
         }
@@ -93,6 +98,12 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                 })
                 )
             }
+
+            override fun onError(e: Exception) {
+                Toast.makeText(getApplication(),"Возникла проблемма, попробуйте повторить позже",Toast.LENGTH_SHORT)
+                    .show()
+            }
+
         })
     }
 
@@ -109,6 +120,11 @@ fun deliteLike(id: Long) {
                             post
                     })
                 )
+            }
+
+            override fun onError(e: Exception) {
+                Toast.makeText(getApplication(),"Возникла проблемма, попробуйте повторить позже",Toast.LENGTH_SHORT)
+                    .show()
             }
         })
 
@@ -128,6 +144,8 @@ fun removeById(id: Long) {
 
         override fun onError(e: Exception) {
             _data.postValue(_data.value?.copy(posts = old))
+            Toast.makeText(getApplication(),"Возникла проблемма, при удалении поста, попробуйте повторить позже",Toast.LENGTH_SHORT)
+                .show()
         }
 
     })
